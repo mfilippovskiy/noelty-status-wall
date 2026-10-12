@@ -1,0 +1,520 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#0b0e14">
+<title>Noelty status wall</title>
+<style>
+  :root {
+    --bg: #0b0e14;
+    --panel: #131822;
+    --panel-2: #171d29;
+    --line: #222a39;
+    --text: #e8ebf1;
+    --muted: #8a93a5;
+    --faint: #5b6475;
+    --ok: #3ddc84;
+    --warn: #f5b942;
+    --bad: #ff5a5f;
+    --idle: #6b7486;
+    --info: #4ea1ff;
+    --gap: clamp(8px, 1.2vw, 16px);
+    --pad: clamp(10px, 1.5vw, 20px);
+    font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; background: var(--bg); color: var(--text); }
+  body { overflow: hidden; -webkit-font-smoothing: antialiased; }
+
+  /* The whole screen moves a few pixels now and then, so nothing stays lit in one place. */
+  #wall {
+    height: 100dvh; display: grid; grid-template-rows: auto 1fr 1fr; gap: var(--gap);
+    padding: var(--pad); transform: translate(var(--shift-x, 0px), var(--shift-y, 0px));
+    transition: transform 2s ease, filter 1s ease;
+  }
+  body.problem #wall { box-shadow: inset 0 0 0 3px var(--bad); }
+  body.dim #wall { filter: brightness(0.45); }
+
+  header {
+    display: flex; align-items: center; gap: var(--gap); min-height: 44px;
+  }
+  .brand { font-weight: 700; letter-spacing: 0.02em; font-size: clamp(15px, 1.9vw, 22px); }
+  .brand span { color: var(--muted); font-weight: 500; }
+  .overall {
+    margin-inline-start: auto; display: flex; align-items: center; gap: 10px;
+    padding: 6px 14px; border-radius: 999px; background: var(--panel); border: 1px solid var(--line);
+    font-weight: 700; font-size: clamp(12px, 1.4vw, 16px); letter-spacing: 0.06em; text-transform: uppercase;
+  }
+  .overall.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); }
+  .overall.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+  .overall.bad { color: #fff; background: var(--bad); border-color: var(--bad); }
+  .overall.idle { color: var(--muted); }
+  .meta { display: flex; align-items: center; gap: 14px; color: var(--muted); font-size: clamp(11px, 1.2vw, 14px); font-variant-numeric: tabular-nums; }
+  .clock { color: var(--text); font-size: clamp(15px, 1.9vw, 22px); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--idle); display: inline-block; }
+  .chip.on i { background: var(--ok); }
+  .chip.off i { background: var(--warn); }
+
+  .row { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: var(--gap); min-height: 0; }
+  .tile {
+    position: relative; min-height: 0; overflow: hidden; display: flex; flex-direction: column;
+    background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line);
+    border-radius: 14px; padding: var(--pad);
+  }
+  .tile::before { content: ""; position: absolute; inset-inline-start: 0; inset-block: 0; width: 4px; background: var(--idle); }
+  .tile.ok::before { background: var(--ok); }
+  .tile.warn::before { background: var(--warn); }
+  .tile.bad::before { background: var(--bad); }
+  .tile.bad { background: linear-gradient(180deg, #3a1418, #24121a); border-color: var(--bad); }
+  .tile.stale { opacity: 0.45; }
+  .kind { color: var(--faint); font-size: clamp(9px, 1vw, 12px); letter-spacing: 0.12em; text-transform: uppercase; }
+  .name { font-size: clamp(13px, 1.7vw, 20px); font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-top: 2px; }
+  .state { font-size: clamp(26px, 5.2vw, 60px); font-weight: 800; line-height: 1; letter-spacing: 0.01em; margin-top: auto; }
+  .ok .state { color: var(--ok); } .warn .state { color: var(--warn); } .bad .state { color: var(--bad); }
+  .tile:not(.ok):not(.warn):not(.bad) .state { color: var(--idle); }
+  .sub { color: var(--muted); font-size: clamp(11px, 1.3vw, 15px); margin-top: 6px; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .sub b { color: var(--text); font-weight: 600; }
+  .foot { display: flex; gap: clamp(6px, 1vw, 14px); margin-top: 10px; color: var(--muted); font-size: clamp(10px, 1.15vw, 13px); font-variant-numeric: tabular-nums; overflow: hidden; }
+  .foot span { white-space: nowrap; }
+  .foot b { color: var(--text); font-weight: 600; }
+  svg.spark { width: 100%; height: clamp(22px, 5vh, 44px); margin-top: 8px; display: block; }
+  svg.spark path.line { fill: none; stroke: var(--info); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+  svg.spark path.area { fill: color-mix(in srgb, var(--info) 18%, transparent); stroke: none; }
+  .bar { height: 6px; border-radius: 3px; background: var(--line); margin-top: 10px; overflow: hidden; }
+  .bar > i { display: block; height: 100%; background: var(--ok); border-radius: 3px; transition: width 1s linear; }
+  .warn .bar > i { background: var(--warn); } .bad .bar > i { background: var(--bad); }
+
+  .versions { gap: 0; }
+  .versions .list { margin-top: auto; display: grid; gap: clamp(4px, 1vh, 10px); }
+  .versions .v { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; border-top: 1px solid var(--line); padding-top: clamp(4px, 1vh, 10px); }
+  .versions .v:first-child { border-top: 0; padding-top: 0; }
+  .versions .v span { color: var(--muted); font-size: clamp(11px, 1.3vw, 15px); text-transform: uppercase; letter-spacing: 0.08em; }
+  .versions .v b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: clamp(14px, 2vw, 24px); font-weight: 600; }
+  .versions .v b.none { color: var(--faint); }
+
+  .err { color: var(--bad); font-size: clamp(10px, 1.1vw, 13px); margin-top: 6px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  /* Setup: shown once, on a device that has no keys yet. */
+  #setup { position: fixed; inset: 0; display: none; place-items: center; background: var(--bg); padding: 20px; overflow: auto; }
+  #setup.show { display: grid; }
+  #setup form { width: min(560px, 100%); display: grid; gap: 14px; background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 24px; }
+  #setup h1 { margin: 0; font-size: 22px; }
+  #setup p { margin: 0; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  #setup label { display: grid; gap: 6px; font-size: 13px; color: var(--muted); }
+  #setup input { height: 44px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg); color: var(--text); padding: 0 12px; font-size: 15px; font-family: ui-monospace, Menlo, Consolas, monospace; }
+  #setup input:focus-visible, button:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+  #setup .actions { display: flex; gap: 10px; flex-wrap: wrap; }
+  button { height: 44px; padding: 0 18px; border-radius: 10px; border: 1px solid var(--line); background: var(--panel-2); color: var(--text); font-size: 15px; font-weight: 600; cursor: pointer; }
+  button.primary { background: var(--info); border-color: var(--info); color: #06121f; }
+  button.awake { height: auto; min-height: 32px; padding: 4px 10px; border-radius: 999px; background: transparent; color: var(--muted); font-size: inherit; font-weight: 500; }
+  button.awake.off { color: #1d1300; background: var(--warn); border-color: var(--warn); font-weight: 700; }
+  button.awake.off i { background: #1d1300; }
+
+  @media (orientation: portrait) {
+    #wall { grid-template-rows: auto auto auto; overflow: auto; height: auto; min-height: 100dvh; }
+    body { overflow: auto; }
+    .row { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .tile { min-height: 150px; }
+    .meta .hide-narrow { display: none; }
+  }
+  @media (max-width: 720px) { .meta .hide-narrow { display: none; } }
+  @media (prefers-reduced-motion: reduce) { #wall, .bar > i { transition: none; } }
+</style>
+</head>
+<body>
+
+<main id="wall" aria-live="polite">
+  <header>
+    <div class="brand">Noelty <span>status</span></div>
+    <div id="overall" class="overall idle">Loading…</div>
+    <div class="meta">
+      <span id="fresh" class="chip hide-narrow"><i></i><span>—</span></span>
+      <button id="awake" class="chip awake" type="button" title="Keep the screen on and go full screen"><i></i><span>screen</span></button>
+      <span id="clock" class="clock">--:--</span>
+    </div>
+  </header>
+  <section id="monitors" class="row" aria-label="Uptime monitors"></section>
+  <section id="bottom" class="row" aria-label="Background jobs and versions"></section>
+</main>
+
+<div id="setup">
+  <form id="setup-form" autocomplete="off">
+    <h1>Set up this screen</h1>
+    <p>Paste <b>read-only</b> API keys. They are kept in this browser only (localStorage) and are sent only to the service they belong to. Never use a main or read-write key here.</p>
+    <label>UptimeRobot read-only API key
+      <input id="f-ur" name="ur" spellcheck="false" placeholder="ur…-…">
+    </label>
+    <label>Healthchecks.io read-only API key
+      <input id="f-hc" name="hc" spellcheck="false" placeholder="hcr_…">
+    </label>
+    <label>Product API origin (for versions)
+      <input id="f-api" name="api" spellcheck="false" value="https://app.noelty.io">
+    </label>
+    <div class="actions">
+      <button class="primary" type="submit">Save and start</button>
+      <button type="button" id="demo-btn">Show demo data</button>
+    </div>
+  </form>
+</div>
+
+<script>
+'use strict';
+/*
+ * Noelty status wall: one screen for UptimeRobot monitors, Healthchecks.io checks and the live
+ * build of each part of the product. A static page: it polls the three sources from the browser.
+ *
+ * Settings come from the URL fragment once (#ur=<key>&hc=<key>&api=<origin>&every=<seconds>
+ * &dim=<from>-<to>) and are then kept in localStorage, so the keys leave the address bar.
+ * #demo shows made-up data; #reset forgets the keys.
+ */
+const STORE = 'noelty-status-wall';
+const DEFAULTS = { ur: '', hc: '', api: 'https://app.noelty.io', every: 60, dim: '' };
+const $ = (id) => document.getElementById(id);
+
+function loadConfig() {
+  const hash = new URLSearchParams(location.hash.replace(/^#/, ''));
+  if (hash.has('reset')) { try { localStorage.removeItem(STORE); } catch (e) { /* private mode */ } }
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { saved = {}; }
+  const cfg = { ...DEFAULTS, ...saved };
+  let fromHash = false;
+  for (const key of Object.keys(DEFAULTS)) {
+    if (hash.has(key)) { cfg[key] = hash.get(key); fromHash = true; }
+  }
+  cfg.every = Math.max(30, Number(cfg.every) || DEFAULTS.every);
+  cfg.demo = hash.has('demo');
+  if (fromHash) saveConfig(cfg);
+  // The keys must not stay in the address bar or in the history.
+  if (fromHash || hash.has('reset')) history.replaceState(null, '', location.pathname + (cfg.demo ? '#demo' : ''));
+  return cfg;
+}
+function saveConfig(cfg) {
+  const { ur, hc, api, every, dim } = cfg;
+  try { localStorage.setItem(STORE, JSON.stringify({ ur, hc, api, every, dim })); } catch (e) { /* private mode */ }
+}
+
+// ── Sources ────────────────────────────────────────────────────────────────
+
+// UptimeRobot v2 monitor status. 0 paused, 1 not checked yet, 2 up, 8 seems down, 9 down.
+const UR_STATE = {
+  0: ['idle', 'PAUSED'], 1: ['idle', 'PENDING'], 2: ['ok', 'UP'], 8: ['warn', 'SEEMS DOWN'], 9: ['bad', 'DOWN'],
+};
+
+async function fetchUptimeRobot(key) {
+  const body = new URLSearchParams({
+    api_key: key, format: 'json', custom_uptime_ratios: '1-7-30',
+    response_times: '1', response_times_limit: '24', logs: '1', logs_limit: '5',
+  });
+  const res = await fetch('https://api.uptimerobot.com/v2/getMonitors', { method: 'POST', body });
+  if (!res.ok) throw new Error('UptimeRobot answered HTTP ' + res.status);
+  const data = await res.json();
+  if (data.stat !== 'ok') throw new Error((data.error && data.error.message) || 'UptimeRobot refused the key');
+  return (data.monitors || []).map((m) => {
+    const [level, label] = UR_STATE[m.status] || ['idle', 'STATUS ' + m.status];
+    const ratios = String(m.custom_uptime_ratio || '').split('-').map(Number);
+    const times = (m.response_times || []).map((t) => Number(t.value)).filter(Number.isFinite).reverse();
+    // Log type 1 is "down" in this API; the newest one is when it last went down.
+    const lastDown = (m.logs || []).find((l) => l.type === 1);
+    return {
+      name: m.friendly_name || 'monitor', level, label,
+      ms: Number(m.average_response_time) || (times.length ? times[times.length - 1] : null),
+      times, uptime: { d1: ratios[0], d7: ratios[1], d30: ratios[2] },
+      lastDown: lastDown ? lastDown.datetime * 1000 : null,
+    };
+  });
+}
+
+const HC_STATE = {
+  up: ['ok', 'UP'], grace: ['warn', 'LATE'], down: ['bad', 'DOWN'], new: ['idle', 'NEW'], paused: ['idle', 'PAUSED'],
+};
+
+async function fetchHealthchecks(key) {
+  const res = await fetch('https://healthchecks.io/api/v3/checks/', { headers: { 'X-Api-Key': key } });
+  if (!res.ok) throw new Error('Healthchecks answered HTTP ' + res.status);
+  const data = await res.json();
+  return (data.checks || []).map((c) => {
+    const [level, label] = HC_STATE[c.status] || ['idle', String(c.status || '?').toUpperCase()];
+    return {
+      name: c.name || c.slug || 'check', level, label,
+      last: c.last_ping ? Date.parse(c.last_ping) : null,
+      next: c.next_ping ? Date.parse(c.next_ping) : null,
+      period: Number(c.timeout) || null, grace: Number(c.grace) || 0,
+    };
+  });
+}
+
+async function fetchVersions(api) {
+  const res = await fetch(api.replace(/\/$/, '') + '/api/v1/versions', { cache: 'no-store' });
+  if (!res.ok) throw new Error('versions answered HTTP ' + res.status);
+  const body = await res.json();
+  return body.data || {};
+}
+
+function demoData() {
+  const now = Date.now();
+  const wave = (base) => Array.from({ length: 24 }, (_, i) => Math.round(base + 40 * Math.sin(i / 2.5) + (i * 37) % 23));
+  return {
+    monitors: [
+      { name: 'Noelty API health', level: 'ok', label: 'UP', ms: 184, times: wave(180), uptime: { d1: 100, d7: 99.98, d30: 99.95 }, lastDown: now - 9 * 864e5 },
+      { name: 'Noelty app', level: 'ok', label: 'UP', ms: 96, times: wave(95), uptime: { d1: 100, d7: 100, d30: 99.99 }, lastDown: null },
+      { name: 'Noelty admin', level: 'ok', label: 'UP', ms: 102, times: wave(100), uptime: { d1: 100, d7: 100, d30: 100 }, lastDown: null },
+      { name: 'Noelty landing', level: 'bad', label: 'DOWN', ms: null, times: wave(140), uptime: { d1: 96.4, d7: 99.4, d30: 99.8 }, lastDown: now - 7 * 6e4 },
+    ],
+    checks: [
+      { name: 'noelty text sweep', level: 'ok', label: 'UP', last: now - 2.2 * 36e5, next: now + 3.8 * 36e5, period: 21600, grace: 3600 },
+      { name: 'noelty key probe', level: 'warn', label: 'LATE', last: now - 6.4 * 36e5, next: now - 0.4 * 36e5, period: 21600, grace: 3600 },
+      { name: 'noelty audit prune', level: 'ok', label: 'UP', last: now - 5 * 36e5, next: now + 19 * 36e5, period: 86400, grace: 7200 },
+    ],
+    versions: { back: 'back-1.54', front: 'front-1.64', admin: 'admin-1.30' },
+  };
+}
+
+// ── Rendering ──────────────────────────────────────────────────────────────
+
+function el(tag, cls, text) {
+  const node = document.createElement(tag);
+  if (cls) node.className = cls;
+  if (text !== undefined && text !== null) node.textContent = text; // never innerHTML: names come from outside
+  return node;
+}
+function ago(ms) {
+  if (ms === null || !Number.isFinite(ms)) return '—';
+  const s = Math.max(0, Math.round(ms / 1000));
+  if (s < 90) return s + 's';
+  const m = Math.round(s / 60);
+  if (m < 90) return m + 'm';
+  const h = Math.floor(m / 60);
+  if (h < 48) return h + 'h ' + (m % 60) + 'm';
+  return Math.floor(h / 24) + 'd ' + (h % 24) + 'h';
+}
+function pct(v) {
+  if (!Number.isFinite(v)) return '—';
+  return (v >= 100 ? '100' : v.toFixed(2)) + '%';
+}
+function spark(values) {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('class', 'spark');
+  svg.setAttribute('viewBox', '0 0 100 30');
+  svg.setAttribute('preserveAspectRatio', 'none');
+  svg.setAttribute('aria-hidden', 'true');
+  if (values.length < 2) return svg;
+  const max = Math.max(...values), min = Math.min(...values), span = Math.max(1, max - min);
+  const pts = values.map((v, i) => [(i / (values.length - 1)) * 100, 27 - ((v - min) / span) * 24]);
+  const d = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(2) + ' ' + p[1].toFixed(2)).join(' ');
+  for (const [cls, path] of [['area', d + ' L100 30 L0 30 Z'], ['line', d]]) {
+    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    p.setAttribute('class', cls); p.setAttribute('d', path); svg.appendChild(p);
+  }
+  return svg;
+}
+
+function monitorTile(m, stale) {
+  const tile = el('article', 'tile ' + m.level + (stale ? ' stale' : ''));
+  tile.append(el('div', 'kind', 'Uptime'), el('div', 'name', m.name), el('div', 'state', m.label));
+  const sub = el('div', 'sub');
+  if (m.level === 'bad' && m.lastDown) { sub.append('down for ', el('b', '', ago(Date.now() - m.lastDown))); }
+  else if (m.ms) { sub.append('response ', el('b', '', Math.round(m.ms) + ' ms')); }
+  else sub.textContent = ' ';
+  tile.append(sub, spark(m.times));
+  const foot = el('div', 'foot');
+  for (const [label, v] of [['24h', m.uptime.d1], ['7d', m.uptime.d7], ['30d', m.uptime.d30]]) {
+    const s = el('span', '', label + ' '); s.append(el('b', '', pct(v))); foot.append(s);
+  }
+  tile.append(foot);
+  return tile;
+}
+
+function checkTile(c, stale) {
+  const now = Date.now();
+  const tile = el('article', 'tile ' + c.level + (stale ? ' stale' : ''));
+  tile.append(el('div', 'kind', 'Background job'), el('div', 'name', c.name), el('div', 'state', c.label));
+  const sub = el('div', 'sub');
+  sub.append('last ping ', el('b', '', c.last ? ago(now - c.last) + ' ago' : 'never'));
+  tile.append(sub);
+  const bar = el('div', 'bar'), fill = el('i');
+  const done = c.last && c.period ? Math.min(1, (now - c.last) / (c.period * 1000)) : 0;
+  fill.style.width = Math.round(done * 100) + '%';
+  bar.append(fill); tile.append(bar);
+  const foot = el('div', 'foot');
+  const next = el('span', '', c.next && c.next > now ? 'next in ' : 'expected ');
+  next.append(el('b', '', c.next ? (c.next > now ? ago(c.next - now) : ago(now - c.next) + ' ago') : '—'));
+  const every = el('span', '', 'every '); every.append(el('b', '', c.period ? ago(c.period * 1000) : '—'));
+  foot.append(next, every); tile.append(foot);
+  return tile;
+}
+
+function versionsTile(versions, error, stale) {
+  const tile = el('article', 'tile versions ' + (error ? 'warn' : 'ok') + (stale ? ' stale' : ''));
+  tile.append(el('div', 'kind', 'Live builds'), el('div', 'name', 'Versions'));
+  if (error) tile.append(el('div', 'err', error));
+  const list = el('div', 'list');
+  for (const part of ['back', 'front', 'admin']) {
+    const row = el('div', 'v'); const v = versions && versions[part];
+    row.append(el('span', '', part), el('b', v ? '' : 'none', v ? String(v).replace(part + '-', '') : '—'));
+    list.append(row);
+  }
+  tile.append(list);
+  return tile;
+}
+
+function messageTile(kind, title, text, level) {
+  const tile = el('article', 'tile ' + (level || ''));
+  tile.append(el('div', 'kind', kind), el('div', 'name', title), el('div', 'err', text));
+  return tile;
+}
+
+// ── State and loop ─────────────────────────────────────────────────────────
+
+const cfg = loadConfig();
+const state = {
+  monitors: { data: null, at: 0, error: null },
+  checks: { data: null, at: 0, error: null },
+  versions: { data: null, at: 0, error: null },
+};
+// Data older than this many polls is shown as stale: a frozen screen must not look healthy.
+const STALE_AFTER = 3;
+
+async function refresh() {
+  if (cfg.demo) {
+    const demo = demoData(); const now = Date.now();
+    state.monitors = { data: demo.monitors, at: now, error: null };
+    state.checks = { data: demo.checks, at: now, error: null };
+    state.versions = { data: demo.versions, at: now, error: null };
+    return render();
+  }
+  const jobs = [
+    ['monitors', cfg.ur ? () => fetchUptimeRobot(cfg.ur) : null, 'no UptimeRobot key'],
+    ['checks', cfg.hc ? () => fetchHealthchecks(cfg.hc) : null, 'no Healthchecks key'],
+    ['versions', cfg.api ? () => fetchVersions(cfg.api) : null, 'no API origin'],
+  ];
+  await Promise.all(jobs.map(async ([name, job, missing]) => {
+    if (!job) { state[name].error = missing; return; }
+    try { state[name] = { data: await job(), at: Date.now(), error: null }; }
+    catch (e) { state[name].error = (e && e.message) || 'request failed'; }
+  }));
+  render();
+}
+
+function isStale(source) {
+  return !source.at || Date.now() - source.at > STALE_AFTER * cfg.every * 1000;
+}
+
+function render() {
+  const now = Date.now();
+  const mon = $('monitors'), bottom = $('bottom');
+  mon.replaceChildren(); bottom.replaceChildren();
+
+  const mStale = isStale(state.monitors), cStale = isStale(state.checks), vStale = isStale(state.versions);
+  if (state.monitors.data) state.monitors.data.forEach((m) => mon.append(monitorTile(m, mStale)));
+  if (!state.monitors.data || (state.monitors.error && mStale)) {
+    mon.append(messageTile('Uptime', 'UptimeRobot', state.monitors.error || 'loading…', state.monitors.error ? 'warn' : ''));
+  }
+  if (state.checks.data) state.checks.data.forEach((c) => bottom.append(checkTile(c, cStale)));
+  if (!state.checks.data || (state.checks.error && cStale)) {
+    bottom.append(messageTile('Background jobs', 'Healthchecks.io', state.checks.error || 'loading…', state.checks.error ? 'warn' : ''));
+  }
+  bottom.append(versionsTile(state.versions.data, state.versions.data ? null : state.versions.error, vStale && !!state.versions.data));
+
+  const items = [...(state.monitors.data || []), ...(state.checks.data || [])];
+  const bad = items.filter((i) => i.level === 'bad').length;
+  const warn = items.filter((i) => i.level === 'warn').length;
+  const blind = [state.monitors, state.checks].filter((s) => s.error || isStale(s)).length;
+  const overall = $('overall');
+  let cls = 'ok', text = 'All systems up';
+  if (bad) { cls = 'bad'; text = bad + (bad === 1 ? ' problem' : ' problems'); }
+  else if (blind) { cls = 'warn'; text = 'No fresh data'; }
+  else if (warn) { cls = 'warn'; text = warn + ' late'; }
+  else if (!items.length) { cls = 'idle'; text = 'Loading…'; }
+  overall.className = 'overall ' + cls; overall.textContent = text;
+  document.body.classList.toggle('problem', bad > 0);
+  document.title = (bad ? '🔴 ' + bad + ' down' : blind ? '🟡 no data' : '🟢 up') + ' · Noelty status';
+
+  const newest = Math.max(state.monitors.at, state.checks.at);
+  const fresh = $('fresh');
+  fresh.className = 'chip hide-narrow ' + (blind ? 'off' : 'on');
+  fresh.lastElementChild.textContent = newest ? 'updated ' + ago(now - newest) + ' ago' : 'no data yet';
+}
+
+function tick() {
+  const d = new Date();
+  $('clock').textContent = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // Night dimming: dim=23-7 lowers the brightness between those local hours.
+  const m = /^(\d{1,2})-(\d{1,2})$/.exec(cfg.dim || '');
+  if (m) {
+    const h = d.getHours(), from = +m[1], to = +m[2];
+    document.body.classList.toggle('dim', from > to ? (h >= from || h < to) : (h >= from && h < to));
+  }
+  render();
+}
+
+// A static picture lit for months leaves a mark: move everything a few pixels every 5 minutes.
+function shift() {
+  const wall = $('wall');
+  wall.style.setProperty('--shift-x', Math.round((Math.random() - 0.5) * 8) + 'px');
+  wall.style.setProperty('--shift-y', Math.round((Math.random() - 0.5) * 8) + 'px');
+}
+
+// ── Keeping the screen on ──────────────────────────────────────────────────
+
+let lock = null;
+async function keepAwake() {
+  const chip = $('awake');
+  if (!('wakeLock' in navigator)) {
+    chip.className = 'chip awake'; chip.lastElementChild.textContent = 'no wake lock here';
+    return false;
+  }
+  try {
+    lock = await navigator.wakeLock.request('screen');
+    lock.addEventListener('release', () => { chip.className = 'chip awake off'; chip.lastElementChild.textContent = 'tap: keep screen on'; });
+    chip.className = 'chip awake on'; chip.lastElementChild.textContent = 'screen stays on';
+    return true;
+  } catch (e) {
+    // Refused (battery saver, or the browser wants a tap first): ask for one.
+    chip.className = 'chip awake off'; chip.lastElementChild.textContent = 'tap: keep screen on';
+    return false;
+  }
+}
+// The lock is dropped whenever the page is hidden; take it again when it is back.
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible') { keepAwake(); refresh(); }
+});
+$('awake').addEventListener('click', async () => {
+  await keepAwake();
+  if (document.documentElement.requestFullscreen && !document.fullscreenElement) {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+});
+// A double tap anywhere toggles full screen.
+document.addEventListener('dblclick', () => {
+  if (document.fullscreenElement) document.exitFullscreen();
+  else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
+});
+
+// ── Start ──────────────────────────────────────────────────────────────────
+
+function start() {
+  $('setup').classList.remove('show');
+  refresh();
+  setInterval(refresh, cfg.every * 1000);
+  setInterval(tick, 5000);
+  setInterval(shift, 5 * 60 * 1000);
+  tick();
+  keepAwake();
+}
+
+$('setup-form').addEventListener('submit', (e) => {
+  e.preventDefault();
+  cfg.ur = $('f-ur').value.trim(); cfg.hc = $('f-hc').value.trim(); cfg.api = $('f-api').value.trim();
+  saveConfig(cfg);
+  start();
+});
+$('demo-btn').addEventListener('click', () => { cfg.demo = true; start(); });
+
+if (cfg.demo || cfg.ur || cfg.hc) start();
+else { $('f-api').value = cfg.api; $('setup').classList.add('show'); }
+</script>
+</body>
+</html>
