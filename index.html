@@ -30,7 +30,7 @@
 
   /* The whole screen moves a few pixels now and then, so nothing stays lit in one place. */
   #wall {
-    height: 100dvh; display: grid; grid-template-rows: auto 1fr 1fr; gap: var(--gap);
+    height: 100dvh; display: grid; grid-template-rows: auto 1fr 1fr auto; gap: var(--gap);
     padding: var(--pad); transform: translate(var(--shift-x, 0px), var(--shift-y, 0px));
     transition: transform 2s ease, filter 1s ease;
   }
@@ -100,6 +100,16 @@
   .versions .v b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: clamp(14px, 2vw, 24px); font-weight: 600; }
   .versions .v b.none { color: var(--faint); }
 
+  /* Versions as a thin strip along the bottom: title, then each build side by side. */
+  #strip { min-height: 0; }
+  .versions.strip { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px clamp(16px, 3vw, 48px); min-height: 0; padding-block: clamp(8px, 1.2vh, 14px); }
+  .versions.strip .head { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }
+  .versions.strip .name { margin-top: 0; }
+  .versions.strip .list { margin-top: 0; display: flex; flex: 1; gap: clamp(16px, 3vw, 48px); }
+  .versions.strip .v { border-top: 0; padding-top: 0; justify-content: flex-start; border-inline-start: 1px solid var(--line); padding-inline-start: clamp(16px, 3vw, 48px); }
+  .versions.strip .v:first-child { border-inline-start: 0; padding-inline-start: 0; }
+  .versions.strip .err { margin-top: 0; -webkit-line-clamp: 1; }
+
   .err { color: var(--bad); font-size: clamp(10px, 1.1vw, 13px); margin-top: 6px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 
   /* A monitor or job tile opens its detail screen. */
@@ -165,7 +175,7 @@
   button.awake.off i { background: #1d1300; }
 
   @media (orientation: portrait) {
-    #wall { grid-template-rows: auto auto auto; overflow: auto; height: auto; min-height: 100dvh; }
+    #wall { grid-template-rows: auto auto auto auto; overflow: auto; height: auto; min-height: 100dvh; }
     body { overflow: auto; }
     .row, .row.dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tile { min-height: 150px; }
@@ -188,7 +198,8 @@
     </div>
   </header>
   <section id="monitors" class="row" aria-label="Uptime monitors"></section>
-  <section id="bottom" class="row" aria-label="Background jobs and versions"></section>
+  <section id="bottom" class="row" aria-label="Background jobs"></section>
+  <section id="strip" aria-label="Live builds"></section>
 </main>
 
 <main id="detail" aria-live="polite"></main>
@@ -461,8 +472,10 @@ function checkTile(c, stale) {
 }
 
 function versionsTile(versions, error, stale) {
-  const tile = el('article', 'tile versions ' + (error ? 'warn' : 'ok') + (stale ? ' stale' : ''));
-  tile.append(el('div', 'kind', 'Live builds'), el('div', 'name', 'Versions'));
+  const tile = el('article', 'tile versions strip ' + (error ? 'warn' : 'ok') + (stale ? ' stale' : ''));
+  const head = el('div', 'head');
+  head.append(el('div', 'name', 'Versions'), el('div', 'kind', 'Live builds'));
+  tile.append(head);
   if (error) tile.append(el('div', 'err', error));
   const list = el('div', 'list');
   for (const part of ['back', 'front', 'admin']) {
@@ -854,7 +867,7 @@ function render() {
   if (!state.checks.data || (state.checks.error && cStale)) {
     bottom.append(messageTile('Background jobs', 'Healthchecks.io', state.checks.error || 'loading…', state.checks.error ? 'warn' : ''));
   }
-  bottom.append(versionsTile(state.versions.data, state.versions.data ? null : state.versions.error, vStale && !!state.versions.data));
+  $('strip').replaceChildren(versionsTile(state.versions.data, state.versions.data ? null : state.versions.error, vStale && !!state.versions.data));
 
   for (const row of [mon, bottom]) {
     row.style.setProperty('--cols', Math.max(4, row.children.length));
