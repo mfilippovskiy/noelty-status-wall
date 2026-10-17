@@ -30,7 +30,7 @@
 
   /* The whole screen moves a few pixels now and then, so nothing stays lit in one place. */
   #wall {
-    height: 100dvh; display: grid; grid-template-rows: auto 1fr 1fr; gap: var(--gap);
+    height: 100dvh; display: grid; grid-template-rows: auto 1fr 1fr auto; gap: var(--gap);
     padding: var(--pad); transform: translate(var(--shift-x, 0px), var(--shift-y, 0px));
     transition: transform 2s ease, filter 1s ease;
   }
@@ -100,7 +100,63 @@
   .versions .v b { font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; font-size: clamp(14px, 2vw, 24px); font-weight: 600; }
   .versions .v b.none { color: var(--faint); }
 
+  /* Versions as a thin strip along the bottom: title, then each build side by side. */
+  #strip { min-height: 0; }
+  .versions.strip { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 8px clamp(16px, 3vw, 48px); min-height: 0; padding-block: clamp(8px, 1.2vh, 14px); }
+  .versions.strip .head { display: flex; align-items: baseline; gap: 10px; flex-shrink: 0; }
+  .versions.strip .name { margin-top: 0; }
+  .versions.strip .list { margin-top: 0; display: flex; flex: 1; gap: clamp(16px, 3vw, 48px); }
+  .versions.strip .v { border-top: 0; padding-top: 0; justify-content: flex-start; border-inline-start: 1px solid var(--line); padding-inline-start: clamp(16px, 3vw, 48px); }
+  .versions.strip .v:first-child { border-inline-start: 0; padding-inline-start: 0; }
+  .versions.strip .err { margin-top: 0; -webkit-line-clamp: 1; }
+
   .err { color: var(--bad); font-size: clamp(10px, 1.1vw, 13px); margin-top: 6px; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+
+  /* A monitor or job tile opens its detail screen. */
+  .tile[data-show] { cursor: pointer; -webkit-tap-highlight-color: transparent; }
+  .tile[data-show]:focus-visible { outline: 2px solid var(--info); outline-offset: 2px; }
+
+  /* Detail screen: one monitor or job, in plain words. */
+  #detail { display: none; min-height: 100dvh; padding: var(--pad); gap: var(--gap); align-content: start; }
+  body.detail-open #wall { display: none; }
+  body.detail-open #detail { display: grid; }
+  body.detail-open { overflow: auto; }
+  body.dim #detail { filter: brightness(0.45); }
+  .d-head { display: flex; align-items: center; gap: var(--gap); flex-wrap: wrap; }
+  .d-head .back { display: inline-flex; align-items: center; gap: 8px; height: 48px; padding: 0 20px; font-size: 17px; }
+  .d-head .back::before { content: "←"; font-size: 20px; line-height: 1; }
+  [dir='rtl'] .d-head .back::before { content: "→"; }
+  .d-title { min-width: 0; }
+  .d-title .name { font-size: clamp(20px, 2.8vw, 32px); white-space: normal; }
+  .d-head .badge { margin-inline-start: auto; padding: 8px 18px; border-radius: 999px; font-weight: 800; font-size: clamp(16px, 2.2vw, 26px); letter-spacing: 0.04em; background: var(--panel); border: 1px solid var(--line); color: var(--idle); }
+  .badge.ok { color: var(--ok); border-color: color-mix(in srgb, var(--ok) 40%, var(--line)); }
+  .badge.warn { color: var(--warn); border-color: color-mix(in srgb, var(--warn) 45%, var(--line)); }
+  .badge.bad { color: #fff; background: var(--bad); border-color: var(--bad); }
+  .d-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--gap); }
+  .panel { background: linear-gradient(180deg, var(--panel-2), var(--panel)); border: 1px solid var(--line); border-radius: 14px; padding: var(--pad); min-width: 0; }
+  .panel.wide { grid-column: 1 / -1; }
+  .panel h2 { margin: 0 0 10px; color: var(--faint); font-size: clamp(10px, 1.1vw, 13px); font-weight: 600; letter-spacing: 0.12em; text-transform: uppercase; }
+  .panel p { margin: 0 0 8px; font-size: clamp(14px, 1.6vw, 18px); line-height: 1.5; }
+  .panel p:last-child { margin-bottom: 0; }
+  .panel p.hint { color: var(--muted); font-size: clamp(13px, 1.4vw, 16px); }
+  .panel p .label { color: var(--muted); }
+  .facts { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px 18px; margin: 0; }
+  .facts div { min-width: 0; }
+  .facts dt { color: var(--muted); font-size: clamp(11px, 1.2vw, 14px); }
+  .facts dd { margin: 2px 0 0; font-size: clamp(16px, 2vw, 24px); font-weight: 600; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+  .facts dd small { display: block; color: var(--muted); font-size: clamp(11px, 1.2vw, 14px); font-weight: 400; }
+  .panel svg.spark { height: clamp(90px, 22vh, 200px); }
+  .chart-scale { display: flex; justify-content: space-between; gap: 10px; color: var(--muted); font-size: clamp(11px, 1.2vw, 14px); font-variant-numeric: tabular-nums; margin-top: 6px; }
+  .chart-scale b { color: var(--text); font-weight: 600; }
+  .events { list-style: none; margin: 0; padding: 0; display: grid; }
+  .events li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: baseline; gap: 12px; padding: 10px 0; border-top: 1px solid var(--line); font-size: clamp(13px, 1.5vw, 17px); font-variant-numeric: tabular-nums; }
+  .events li:first-child { border-top: 0; padding-top: 0; }
+  .events .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--idle); align-self: center; }
+  .events .ok .dot { background: var(--ok); } .events .bad .dot { background: var(--bad); } .events .warn .dot { background: var(--warn); }
+  .events .what small { display: block; color: var(--muted); font-size: 0.85em; }
+  .events time { color: var(--muted); white-space: nowrap; }
+  .empty { color: var(--muted); font-size: clamp(13px, 1.4vw, 16px); }
+  @media (max-width: 720px), (orientation: portrait) { .d-grid { grid-template-columns: minmax(0, 1fr); } }
 
   /* Setup: shown once, on a device that has no keys yet. */
   #setup { position: fixed; inset: 0; display: none; place-items: center; background: var(--bg); padding: 20px; overflow: auto; }
@@ -119,7 +175,7 @@
   button.awake.off i { background: #1d1300; }
 
   @media (orientation: portrait) {
-    #wall { grid-template-rows: auto auto auto; overflow: auto; height: auto; min-height: 100dvh; }
+    #wall { grid-template-rows: auto auto auto auto; overflow: auto; height: auto; min-height: 100dvh; }
     body { overflow: auto; }
     .row, .row.dense { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     .tile { min-height: 150px; }
@@ -142,8 +198,11 @@
     </div>
   </header>
   <section id="monitors" class="row" aria-label="Uptime monitors"></section>
-  <section id="bottom" class="row" aria-label="Background jobs and versions"></section>
+  <section id="bottom" class="row" aria-label="Background jobs"></section>
+  <section id="strip" aria-label="Live builds"></section>
 </main>
+
+<main id="detail" aria-live="polite"></main>
 
 <div id="setup">
   <form id="setup-form" autocomplete="off">
@@ -173,10 +232,13 @@
  *
  * Settings come from the URL fragment once (#ur=<key>&hc=<key>&api=<origin>&every=<seconds>
  * &dim=<from>-<to>) and are then kept in localStorage, so the keys leave the address bar.
- * #demo shows made-up data; #reset forgets the keys.
+ * #demo shows made-up data; #reset forgets the keys. A tapped tile opens its detail screen at
+ * #show=<id> (with #demo&show=<id> in the demo), so the back button of the tablet closes it.
  */
 const STORE = 'noelty-status-wall';
-const DEFAULTS = { ur: '', hc: '', api: 'https://app.noelty.io', every: 60, dim: '' };
+const STORE_VERSION = 2;
+const MIN_EVERY = 20;
+const DEFAULTS = { ur: '', hc: '', api: 'https://app.noelty.io', every: 20, dim: '' };
 const $ = (id) => document.getElementById(id);
 
 function loadConfig() {
@@ -184,12 +246,14 @@ function loadConfig() {
   if (hash.has('reset')) { try { localStorage.removeItem(STORE); } catch (e) { /* private mode */ } }
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORE) || '{}'); } catch (e) { saved = {}; }
+  // Before version 2 every save wrote the old default of 60 s, chosen or not: forget it.
+  if (saved.v !== STORE_VERSION) delete saved.every;
   const cfg = { ...DEFAULTS, ...saved };
   let fromHash = false;
   for (const key of Object.keys(DEFAULTS)) {
     if (hash.has(key)) { cfg[key] = hash.get(key); fromHash = true; }
   }
-  cfg.every = Math.max(30, Number(cfg.every) || DEFAULTS.every);
+  cfg.every = Math.max(MIN_EVERY, Number(cfg.every) || DEFAULTS.every);
   cfg.demo = hash.has('demo');
   if (fromHash) saveConfig(cfg);
   // The keys must not stay in the address bar or in the history.
@@ -198,7 +262,7 @@ function loadConfig() {
 }
 function saveConfig(cfg) {
   const { ur, hc, api, every, dim } = cfg;
-  try { localStorage.setItem(STORE, JSON.stringify({ ur, hc, api, every, dim })); } catch (e) { /* private mode */ }
+  try { localStorage.setItem(STORE, JSON.stringify({ v: STORE_VERSION, ur, hc, api, every, dim })); } catch (e) { /* private mode */ }
 }
 
 // ── Sources ────────────────────────────────────────────────────────────────
@@ -209,9 +273,10 @@ const UR_STATE = {
 };
 
 async function fetchUptimeRobot(key) {
+  // No response_times_limit: the API then returns the last 24 hours, which the detail chart shows.
   const body = new URLSearchParams({
-    api_key: key, format: 'json', custom_uptime_ratios: '1-7-30',
-    response_times: '1', response_times_limit: '24', logs: '1', logs_limit: '5',
+    api_key: key, format: 'json', custom_uptime_ratios: '1-7-30', custom_down_durations: '1',
+    response_times: '1', logs: '1', logs_limit: '20',
   });
   const res = await fetch('https://api.uptimerobot.com/v2/getMonitors', { method: 'POST', body });
   if (!res.ok) throw new Error('UptimeRobot answered HTTP ' + res.status);
@@ -220,14 +285,28 @@ async function fetchUptimeRobot(key) {
   return (data.monitors || []).map((m) => {
     const [level, label] = UR_STATE[m.status] || ['idle', 'STATUS ' + m.status];
     const ratios = String(m.custom_uptime_ratio || '').split('-').map(Number);
-    const times = (m.response_times || []).map((t) => Number(t.value)).filter(Number.isFinite).reverse();
+    const downs = String(m.custom_down_durations || '').split('-').map(Number);
+    // Oldest first, for the charts.
+    const points = (m.response_times || [])
+      .map((t) => ({ at: t.datetime * 1000, ms: Number(t.value) }))
+      .filter((p) => Number.isFinite(p.ms)).reverse();
+    const all = points.map((p) => p.ms);
     // Log type 1 is "down" in this API; the newest one is when it last went down.
-    const lastDown = (m.logs || []).find((l) => l.type === 1);
+    const logs = (m.logs || []).map((l) => ({
+      type: l.type, at: l.datetime * 1000, duration: Number(l.duration) || 0,
+      reason: (l.reason && (l.reason.detail || l.reason.code)) || '',
+    }));
+    const lastDown = logs.find((l) => l.type === 1);
+    // The tile keeps the same 24 newest points, and their average, it always showed.
+    const times = all.slice(-24);
     return {
       name: m.friendly_name || 'monitor', level, label,
-      ms: Number(m.average_response_time) || (times.length ? times[times.length - 1] : null),
-      times, uptime: { d1: ratios[0], d7: ratios[1], d30: ratios[2] },
-      lastDown: lastDown ? lastDown.datetime * 1000 : null,
+      ms: times.length ? times.reduce((a, b) => a + b, 0) / times.length : null,
+      avg24: Number(m.average_response_time) || null,
+      times, points, uptime: { d1: ratios[0], d7: ratios[1], d30: ratios[2] },
+      down: { d1: downs[0], d7: downs[1], d30: downs[2] },
+      lastDown: lastDown ? lastDown.at : null,
+      url: m.url || null, interval: Number(m.interval) || null, logs,
     };
   });
 }
@@ -247,8 +326,21 @@ async function fetchHealthchecks(key) {
       last: c.last_ping ? Date.parse(c.last_ping) : null,
       next: c.next_ping ? Date.parse(c.next_ping) : null,
       period: Number(c.timeout) || null, grace: Number(c.grace) || 0,
+      key: c.unique_key || null, desc: c.desc || '', schedule: c.schedule || null, tz: c.tz || null,
+      pings: Number(c.n_pings) || 0, took: Number(c.last_duration) || null,
     };
   });
+}
+
+// Up/down changes of one check, newest first. A read-only key may read them; the pings it may not.
+async function fetchFlips(key, uniqueKey) {
+  const res = await fetch('https://healthchecks.io/api/v3/checks/' + encodeURIComponent(uniqueKey) + '/flips/', { headers: { 'X-Api-Key': key } });
+  if (!res.ok) throw new Error('Healthchecks answered HTTP ' + res.status);
+  const data = await res.json();
+  return (Array.isArray(data) ? data : data.flips || [])
+    .map((f) => ({ at: Date.parse(f.timestamp), up: f.up === 1 || f.up === true }))
+    .filter((f) => Number.isFinite(f.at))
+    .sort((a, b) => b.at - a.at);
 }
 
 async function fetchVersions(api) {
@@ -260,19 +352,46 @@ async function fetchVersions(api) {
 
 function demoData() {
   const now = Date.now();
-  const wave = (base) => Array.from({ length: 24 }, (_, i) => Math.round(base + 40 * Math.sin(i / 2.5) + (i * 37) % 23));
+  const wave = (base) => Array.from({ length: 288 }, (_, i) => Math.round(base + 40 * Math.sin(i / 2.5) + (i * 37) % 23 + 30 * Math.sin(i / 40)));
+  const monitor = (name, level, label, base, uptime, down, logs, url) => {
+    const all = wave(base);
+    const points = all.map((ms, i) => ({ at: now - (all.length - 1 - i) * 3e5, ms }));
+    const times = all.slice(-24);
+    const lastDown = logs.find((l) => l.type === 1);
+    return {
+      name, level, label, ms: level === 'bad' ? null : times.reduce((a, b) => a + b, 0) / times.length,
+      avg24: base + 12, times, points, uptime, down, lastDown: lastDown ? lastDown.at : null,
+      url, interval: 300, logs,
+    };
+  };
+  const ev = (type, hoursAgo, minutes, reason) => ({ type, at: now - hoursAgo * 36e5, duration: minutes * 60, reason: reason || '' });
+  const check = (name, level, label, lastH, periodS, graceS, extra) => ({
+    name, level, label, last: now - lastH * 36e5, next: now - lastH * 36e5 + periodS * 1000,
+    period: periodS, grace: graceS, key: 'demo-' + name.replace(/\W+/g, '-'), desc: '', schedule: null, tz: null,
+    pings: 412, took: null, ...extra,
+  });
   return {
     monitors: [
-      { name: 'Noelty API health', level: 'ok', label: 'UP', ms: 184, times: wave(180), uptime: { d1: 100, d7: 99.98, d30: 99.95 }, lastDown: now - 9 * 864e5 },
-      { name: 'Noelty app', level: 'ok', label: 'UP', ms: 96, times: wave(95), uptime: { d1: 100, d7: 100, d30: 99.99 }, lastDown: null },
-      { name: 'Noelty admin', level: 'ok', label: 'UP', ms: 102, times: wave(100), uptime: { d1: 100, d7: 100, d30: 100 }, lastDown: null },
-      { name: 'Noelty landing', level: 'bad', label: 'DOWN', ms: null, times: wave(140), uptime: { d1: 96.4, d7: 99.4, d30: 99.8 }, lastDown: now - 7 * 6e4 },
+      monitor('Noelty API health', 'ok', 'UP', 180, { d1: 100, d7: 99.98, d30: 99.95 }, { d1: 0, d7: 120, d30: 1320 },
+        [ev(2, 9 * 24 - 0.2, 9 * 24 * 60, 'OK'), ev(1, 9 * 24, 12, 'Connection Timeout'), ev(2, 21 * 24, 288 * 60, 'OK'), ev(98, 30 * 24, 0, 'Started')],
+        'https://app.noelty.io/api/v1/healthz'),
+      monitor('Noelty app', 'ok', 'UP', 95, { d1: 100, d7: 100, d30: 99.99 }, { d1: 0, d7: 0, d30: 180 },
+        [ev(2, 18 * 24, 18 * 24 * 60, 'OK'), ev(1, 18 * 24 + 0.05, 3, 'HTTP 502 - Bad Gateway'), ev(98, 30 * 24, 0, 'Started')],
+        'https://app.noelty.io/'),
+      monitor('Noelty admin', 'ok', 'UP', 100, { d1: 100, d7: 100, d30: 100 }, { d1: 0, d7: 0, d30: 0 },
+        [ev(98, 30 * 24, 0, 'Started')], 'https://admin.noelty.io/'),
+      monitor('Noelty landing', 'bad', 'DOWN', 140, { d1: 96.4, d7: 99.4, d30: 99.8 }, { d1: 420, d7: 420, d30: 420 },
+        [ev(1, 7 / 60, 7, 'HTTP 503 - Service Unavailable'), ev(2, 12 * 24, 12 * 24 * 60, 'OK'), ev(98, 30 * 24, 0, 'Started')],
+        'https://noelty.io/'),
     ],
     checks: [
-      { name: 'noelty text sweep', level: 'ok', label: 'UP', last: now - 2.2 * 36e5, next: now + 3.8 * 36e5, period: 21600, grace: 3600 },
-      { name: 'noelty key probe', level: 'warn', label: 'LATE', last: now - 6.4 * 36e5, next: now - 0.4 * 36e5, period: 21600, grace: 3600 },
-      { name: 'noelty audit prune', level: 'ok', label: 'UP', last: now - 5 * 36e5, next: now + 19 * 36e5, period: 86400, grace: 7200 },
-      { name: 'noelty backup', level: 'ok', label: 'UP', last: now - 9 * 36e5, next: now + 15 * 36e5, period: 86400, grace: 7200 },
+      check('noelty text sweep', 'ok', 'UP', 2.2, 21600, 3600),
+      check('noelty key probe', 'warn', 'LATE', 6.4, 21600, 3600),
+      check('noelty audit prune', 'ok', 'UP', 5, 86400, 7200),
+      check('noelty backup', 'ok', 'UP', 9, 86400, 7200, { took: 74, schedule: '15 2 * * *', tz: 'UTC' }),
+    ],
+    flips: [
+      { at: now - 2 * 864e5, up: true }, { at: now - 2 * 864e5 - 54e5, up: false }, { at: now - 5 * 864e5, up: true },
     ],
     versions: { back: 'back-1.54', front: 'front-1.64', admin: 'admin-1.30' },
   };
@@ -353,8 +472,10 @@ function checkTile(c, stale) {
 }
 
 function versionsTile(versions, error, stale) {
-  const tile = el('article', 'tile versions ' + (error ? 'warn' : 'ok') + (stale ? ' stale' : ''));
-  tile.append(el('div', 'kind', 'Live builds'), el('div', 'name', 'Versions'));
+  const tile = el('article', 'tile versions strip ' + (error ? 'warn' : 'ok') + (stale ? ' stale' : ''));
+  const head = el('div', 'head');
+  head.append(el('div', 'name', 'Versions'), el('div', 'kind', 'Live builds'));
+  tile.append(head);
   if (error) tile.append(el('div', 'err', error));
   const list = el('div', 'list');
   for (const part of ['back', 'front', 'admin']) {
@@ -370,6 +491,313 @@ function messageTile(kind, title, text, level) {
   const tile = el('article', 'tile ' + (level || ''));
   tile.append(el('div', 'kind', kind), el('div', 'name', title), el('div', 'err', text));
   return tile;
+}
+
+// ── Detail screen ──────────────────────────────────────────────────────────
+
+// What each monitor and job is, in plain words. Matched on the name, first match wins; a name
+// that matches nothing gets the general text of its kind.
+const ABOUT_MONITORS = [
+  {
+    match: /api|health/i,
+    what: 'Asks the backend from outside the server whether it is alive. It answers "ok" only when the backend runs and can reach its database.',
+    red: 'Teachers cannot sign in or open their lessons, share links do not open for students, live lessons drop.',
+    look: 'The server and its containers first (is the backend running, is the database up), then the backend log. If every monitor is red at once, the whole server is down.',
+  },
+  {
+    match: /admin/i,
+    what: 'Opens the admin panel, where the owner manages teachers, features and keys.',
+    red: 'Only the owner is affected: teachers and students keep working.',
+    look: 'The admin container and nginx on the server. If API health is red too, start there.',
+  },
+  {
+    match: /landing/i,
+    what: 'Opens the public site noelty.io, where new teachers learn about Noelty and sign up.',
+    red: 'Visitors cannot see the site or sign up. Teachers already in the app are not affected.',
+    look: 'The landing container and nginx on the server.',
+  },
+  {
+    match: /app|front/i,
+    what: 'Opens the teacher web app, the page teachers work in every day.',
+    red: 'Teachers get an error instead of the app. If API health is green, the backend is fine and only the web app is not served.',
+    look: 'The front container and nginx on the server. If API health is red too, start there.',
+  },
+];
+const ABOUT_MONITOR = {
+  what: 'UptimeRobot opens this address from outside the server every few minutes and checks that it answers.',
+  red: 'Whatever is behind this address cannot be reached from the internet.',
+  look: 'The server, then the service behind this address.',
+};
+
+const ABOUT_JOBS = [
+  {
+    match: /text|sweep/i,
+    what: 'Erases the texts teachers pasted for AI lesson generation once they are 30 days old, as the privacy policy promises. Runs inside the backend every 6 hours.',
+    red: 'Nothing a teacher would notice, but old texts are kept longer than promised. If the backend is down, this job goes silent too.',
+    look: 'The backend log ("text sweep"). If API health is red too, the backend itself is the problem.',
+  },
+  {
+    match: /probe|key/i,
+    what: 'Checks that every AI provider key still works (it asks for the list of models, which costs nothing), and reminds about keys that expire and models that are retired soon. Runs inside the backend at start and every 6 hours.',
+    red: 'A dead or expired key would go unnoticed until a teacher\'s AI generation fails.',
+    look: 'The backend log ("probe") and the keys page in the admin.',
+  },
+  {
+    match: /audit|prune/i,
+    what: 'Deletes audit log entries older than a year, as the privacy policy promises. Runs inside the backend once a day.',
+    red: 'Nothing a teacher would notice; old entries are kept longer than promised.',
+    look: 'The backend log ("audit"). If API health is red too, the backend itself is the problem.',
+  },
+  {
+    match: /backup/i,
+    what: 'Every night copies both databases and the uploaded audio, encrypts them and sends them to storage outside the server (Cloudflare R2). Run by cron on the server.',
+    red: 'The newest backup is missing or failed. If the server were lost now, the data since the last good backup would be lost with it.',
+    look: 'backup/backup.log in the deploy folder on the server, then "bash restore.sh list" to see the newest copy.',
+  },
+];
+const ABOUT_JOB = {
+  what: 'A background job that reports to Healthchecks.io after every round.',
+  red: 'The job stopped reporting, or reported a failure.',
+  look: 'The log of whatever runs this job.',
+};
+
+function about(list, fallback, name) {
+  return list.find((a) => a.match.test(name)) || fallback;
+}
+
+// The detail screen shows one item. Its id is the kind and the name: "uptime:<name>" or "job:<name>".
+const view = { id: null, flips: { key: null, data: null, at: 0, error: null } };
+let lastInput = Date.now();
+// With nobody touching it, the tablet goes back to the wall after this long.
+const DETAIL_IDLE_MS = 2 * 60 * 1000;
+
+function routeHash(id) {
+  const parts = [];
+  if (cfg.demo) parts.push('demo');
+  if (id) parts.push('show=' + encodeURIComponent(id));
+  return location.pathname + (parts.length ? '#' + parts.join('&') : '');
+}
+function openDetail(id) {
+  history.pushState({ detail: true }, '', routeHash(id));
+  applyRoute();
+  window.scrollTo(0, 0);
+}
+function closeDetail() {
+  if (history.state && history.state.detail) history.back();
+  else { history.replaceState(null, '', routeHash(null)); applyRoute(); }
+}
+function applyRoute() {
+  const id = new URLSearchParams(location.hash.replace(/^#/, '')).get('show');
+  const changed = id !== view.id;
+  view.id = id;
+  document.body.classList.toggle('detail-open', !!id);
+  if (changed) { view.flips = { key: null, data: null, at: 0, error: null }; loadFlips(); }
+  render();
+}
+
+async function loadFlips() {
+  const c = view.id && view.id.startsWith('job:') ? findItem(view.id) : null;
+  if (!c || !c.key) return;
+  if (cfg.demo) { view.flips = { key: c.key, data: demoData().flips, at: Date.now(), error: null }; return render(); }
+  if (!cfg.hc) return;
+  try { view.flips = { key: c.key, data: await fetchFlips(cfg.hc, c.key), at: Date.now(), error: null }; }
+  catch (e) { view.flips = { ...view.flips, key: c.key, error: (e && e.message) || 'request failed' }; }
+  render();
+}
+
+function findItem(id) {
+  if (!id) return null;
+  const [kind, ...rest] = id.split(':'); const name = rest.join(':');
+  const list = kind === 'uptime' ? state.monitors.data : kind === 'job' ? state.checks.data : null;
+  return (list || []).find((x) => x.name === name) || null;
+}
+
+function when(ms) {
+  if (!Number.isFinite(ms)) return '—';
+  const d = new Date(ms), today = new Date();
+  const time = d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  if (d.toDateString() === today.toDateString()) return 'today at ' + time;
+  return d.toLocaleDateString([], { day: 'numeric', month: 'short' }) + ' at ' + time;
+}
+// A period in words: "6h", not "6h 0m".
+function every(seconds) {
+  return Number.isFinite(seconds) && seconds ? ago(seconds * 1000).replace(/ 0[mh]$/, '') : '—';
+}
+function span(seconds) {
+  if (!Number.isFinite(seconds)) return '—';
+  return seconds ? ago(seconds * 1000) : 'none';
+}
+function fact(label, value, note) {
+  const box = el('div'); const dd = el('dd', '', value);
+  if (note) dd.append(el('small', '', note));
+  box.append(el('dt', '', label), dd);
+  return box;
+}
+function panel(title, wide) {
+  const p = el('section', 'panel' + (wide ? ' wide' : ''));
+  p.append(el('h2', '', title));
+  return p;
+}
+function para(label, text, cls) {
+  const p = el('p', cls || '');
+  if (label) p.append(el('span', 'label', label + ' '));
+  p.append(text);
+  return p;
+}
+function eventRow(level, what, note, at) {
+  const li = el('li', level); const box = el('div', 'what', what);
+  if (note) box.append(el('small', '', note));
+  const t = el('time', '', when(at)); t.dateTime = new Date(at).toISOString();
+  li.append(el('i', 'dot'), box, t);
+  return li;
+}
+
+function detailHead(kind, item, source) {
+  const head = el('div', 'd-head');
+  const back = el('button', 'back', 'Back'); back.type = 'button';
+  back.addEventListener('click', closeDetail);
+  const title = el('div', 'd-title');
+  const age = source.at ? 'data from ' + ago(Date.now() - source.at) + ' ago' : 'no data yet';
+  title.append(el('div', 'kind', kind + ' · ' + age), el('div', 'name', item ? item.name : 'Not found'));
+  head.append(back, title);
+  if (item) head.append(el('div', 'badge ' + item.level, item.label));
+  return head;
+}
+
+function monitorDetail(m) {
+  const now = Date.now(), a = about(ABOUT_MONITORS, ABOUT_MONITOR, m.name);
+  const grid = el('div', 'd-grid');
+
+  const newest = m.logs.find((l) => l.type === 1 || l.type === 2);
+  const words = panel('Right now', true);
+  if (m.level === 'ok') words.append(para('', 'Answers' + (m.ms ? ' in about ' + Math.round(m.ms) + ' ms' : '') + (newest ? ', without a break for ' + ago(now - newest.at) : '') + '. UptimeRobot checks it from outside every ' + (m.interval ? every(m.interval) : 'few minutes') + '.'));
+  else if (m.level === 'bad') words.append(para('', 'Not answering' + (m.lastDown ? ' for ' + ago(now - m.lastDown) : '') + (newest && newest.reason ? ' (' + newest.reason + ')' : '') + '. ' + a.red));
+  else if (m.level === 'warn') words.append(para('', 'The last check failed. UptimeRobot is checking again before it calls this down.'));
+  else words.append(para('', m.label === 'PAUSED' ? 'Monitoring is paused in UptimeRobot: nothing is being checked.' : 'Not checked yet.'));
+  grid.append(words);
+
+  const what = panel('What this is');
+  what.append(para('', a.what), para('If it is red:', a.red, 'hint'));
+  const look = panel('Where to look');
+  look.append(para('', a.look), para('', 'Alerts go to Discord and email when this turns red.', 'hint'));
+  grid.append(what, look);
+
+  const facts = el('dl', 'facts');
+  facts.append(
+    fact('Checked every', every(m.interval)),
+    fact('Response, now', m.points.length && m.level !== 'bad' ? Math.round(m.points[m.points.length - 1].ms) + ' ms' : '—', m.avg24 ? 'average over 24h ' + Math.round(m.avg24) + ' ms' : null),
+    fact('Up, 24 hours', pct(m.uptime.d1), 'down ' + span(m.down.d1)),
+    fact('Up, 7 days', pct(m.uptime.d7), 'down ' + span(m.down.d7)),
+    fact('Up, 30 days', pct(m.uptime.d30), 'down ' + span(m.down.d30)),
+    fact('Last time down', m.lastDown ? when(m.lastDown) : 'not in the recent log'),
+  );
+  if (m.url) facts.append(fact('Address', m.url));
+  const numbers = panel('Numbers', true); numbers.append(facts); grid.append(numbers);
+
+  const chart = panel('Response time, last 24 hours', true);
+  if (m.points.length > 1) {
+    const ms = m.points.map((p) => p.ms);
+    chart.append(spark(ms));
+    const scale = el('div', 'chart-scale');
+    const bit = (label, v) => { const s = el('span', '', label + ' '); s.append(el('b', '', v)); return s; };
+    scale.append(el('span', '', when(m.points[0].at)), bit('fastest', Math.round(Math.min(...ms)) + ' ms'),
+      bit('slowest', Math.round(Math.max(...ms)) + ' ms'), el('span', '', 'now'));
+    chart.append(scale, para('', 'How long the page took to answer each check. Spikes are slow answers; a gap means it did not answer at all.', 'hint'));
+  } else chart.append(el('p', 'empty', 'No response times yet.'));
+  grid.append(chart);
+
+  const log = panel('Recent events', true);
+  const list = el('ul', 'events');
+  m.logs.forEach((l, i) => {
+    const ongoing = i === 0;
+    if (l.type === 1) list.append(eventRow('bad', 'Went down', (l.reason ? l.reason + ' · ' : '') + (ongoing && m.level === 'bad' ? 'still down' : 'was down ' + span(l.duration)), l.at));
+    else if (l.type === 2) list.append(eventRow('ok', 'Came back up', ongoing ? 'up since then' : 'stayed up ' + span(l.duration), l.at));
+    else if (l.type === 98) list.append(eventRow('', 'Monitoring started', null, l.at));
+    else if (l.type === 99) list.append(eventRow('', 'Monitoring paused', null, l.at));
+  });
+  if (list.children.length) log.append(list);
+  else log.append(el('p', 'empty', 'Nothing in the recent log.'));
+  grid.append(log);
+  return grid;
+}
+
+function jobDetail(c) {
+  const now = Date.now(), a = about(ABOUT_JOBS, ABOUT_JOB, c.name);
+  const redAt = c.next ? c.next + c.grace * 1000 : null;
+  const grid = el('div', 'd-grid');
+
+  const words = panel('Right now', true);
+  if (c.level === 'ok') words.append(para('', 'Reported ' + (c.last ? ago(now - c.last) + ' ago' : '—') + ', on time.' + (c.next ? ' The next report is due in ' + ago(c.next - now) + '.' : '')));
+  else if (c.level === 'warn') words.append(para('', 'Late: the report was due ' + (c.next ? ago(now - c.next) + ' ago' : 'already') + '. It turns red ' + (redAt ? when(redAt) : 'soon') + ' unless it reports.'));
+  else if (c.level === 'bad') words.append(para('', 'No report since ' + (c.last ? when(c.last) : 'ever') + ', or the job reported a failure. ' + a.red));
+  else words.append(para('', c.label === 'PAUSED' ? 'Paused in Healthchecks: a missing report raises no alarm.' : 'Created, but no report has arrived yet.'));
+  grid.append(words);
+
+  const what = panel('What this does');
+  what.append(para('', c.desc || a.what), para('If it is red:', a.red, 'hint'));
+  const look = panel('Where to look');
+  look.append(para('', a.look), para('', 'Alerts go to Discord when this turns red.', 'hint'));
+  grid.append(what, look);
+
+  const facts = el('dl', 'facts');
+  facts.append(
+    fact('Last report', c.last ? ago(now - c.last) + ' ago' : 'never', c.last ? when(c.last) : null),
+    fact(c.next && c.next < now ? 'Overdue by' : 'Next report due in', c.next ? ago(Math.abs(c.next - now)) : '—', c.next ? when(c.next) : null),
+    fact('Turns red', redAt ? (redAt > now ? 'in ' + ago(redAt - now) : 'already') : '—', redAt ? when(redAt) : null),
+    fact('Runs', c.schedule ? c.schedule : c.period ? 'every ' + every(c.period) : '—', c.schedule ? 'cron' + (c.tz ? ', ' + c.tz : '') : null),
+    fact('Grace time', c.grace ? every(c.grace) : 'none', 'how late a report may be'),
+  );
+  if (c.took) facts.append(fact('Last round took', ago(c.took * 1000)));
+  if (c.pings) facts.append(fact('Reports so far', String(c.pings)));
+  // The level on the panel colours the bar the way the tile does.
+  const numbers = panel('Numbers', true); numbers.classList.add(c.level); numbers.append(facts);
+  const bar = el('div', 'bar'), fill = el('i');
+  const done = c.last && c.period ? Math.min(1, (now - c.last) / (c.period * 1000)) : 0;
+  fill.style.width = Math.round(done * 100) + '%'; bar.append(fill);
+  numbers.append(bar, para('', 'The bar fills up until the next report is due.', 'hint'));
+  grid.append(numbers);
+
+  const how = panel('How this alarm works', true);
+  how.append(
+    para('', 'Healthchecks.io does not look at the server. The job reports in after every round, and Healthchecks only notices when a report does not come.'),
+    para('', 'A report is expected every ' + (c.period ? every(c.period) : 'period') + '. When it is late the tile turns amber; after ' + (c.grace ? every(c.grace) : 'no') + ' more it turns red and an alert goes out.'),
+  );
+  if (c.level === 'ok' && redAt) how.append(para('', 'So if the whole server goes down now, this tile stays green until ' + when(redAt) + ': the uptime monitors notice that first.', 'hint'));
+  grid.append(how);
+
+  const log = panel('Up and down', true);
+  const flips = view.flips.key === c.key ? view.flips : null;
+  if (flips && flips.data && flips.data.length) {
+    const list = el('ul', 'events');
+    flips.data.slice(0, 20).forEach((f, i) => {
+      const until = i === 0 ? now : flips.data[i - 1].at;
+      list.append(f.up
+        ? eventRow('ok', 'Back on time', i === 0 ? 'fine since then' : 'fine for ' + ago(until - f.at), f.at)
+        : eventRow('bad', 'Went red', (i === 0 ? 'still red' : 'red for ' + ago(until - f.at)) + ' · a report was missing or failed', f.at));
+    });
+    log.append(list);
+  } else if (flips && flips.error) log.append(el('p', 'empty', 'Could not load the history: ' + flips.error));
+  else if (flips && flips.data) log.append(el('p', 'empty', 'Never went red.'));
+  else log.append(el('p', 'empty', 'Loading…'));
+  grid.append(log);
+  return grid;
+}
+
+function renderDetail() {
+  const box = $('detail');
+  const scroll = window.scrollY;
+  const isJob = view.id.startsWith('job:');
+  const item = findItem(view.id);
+  const source = isJob ? state.checks : state.monitors;
+  const parts = [detailHead(isJob ? 'Background job' : 'Uptime monitor', item, source)];
+  if (item) parts.push(isJob ? jobDetail(item) : monitorDetail(item));
+  else {
+    const p = panel('Not found', true);
+    p.append(el('p', 'empty', source.data ? 'This item is no longer in the list.' : 'Waiting for data…'));
+    parts.push(p);
+  }
+  box.replaceChildren(...parts);
+  window.scrollTo(0, scroll);
 }
 
 // ── State and loop ─────────────────────────────────────────────────────────
@@ -389,8 +817,13 @@ async function refresh() {
     state.monitors = { data: demo.monitors, at: now, error: null };
     state.checks = { data: demo.checks, at: now, error: null };
     state.versions = { data: demo.versions, at: now, error: null };
-    return render();
-  }
+  } else await fetchAll();
+  render();
+  // An open job keeps its history fresh too.
+  if (view.id && view.id.startsWith('job:')) loadFlips();
+}
+
+async function fetchAll() {
   const jobs = [
     ['monitors', cfg.ur ? () => fetchUptimeRobot(cfg.ur) : null, 'no UptimeRobot key'],
     ['checks', cfg.hc ? () => fetchHealthchecks(cfg.hc) : null, 'no Healthchecks key'],
@@ -401,28 +834,40 @@ async function refresh() {
     try { state[name] = { data: await job(), at: Date.now(), error: null }; }
     catch (e) { state[name].error = (e && e.message) || 'request failed'; }
   }));
-  render();
 }
 
+// Data older than this is shown as stale, but never sooner than STALE_MIN_S: one refused poll
+// (UptimeRobot allows 10 a minute) must not grey out the wall.
+const STALE_MIN_S = 180;
 function isStale(source) {
-  return !source.at || Date.now() - source.at > STALE_AFTER * cfg.every * 1000;
+  return !source.at || Date.now() - source.at > Math.max(STALE_AFTER * cfg.every, STALE_MIN_S) * 1000;
+}
+
+// A monitor or job tile opens its detail screen; the versions tile and message tiles do not.
+function clickable(tile, id, name) {
+  tile.dataset.show = id;
+  tile.tabIndex = 0;
+  tile.setAttribute('role', 'button');
+  tile.setAttribute('aria-label', name + ': details');
+  return tile;
 }
 
 function render() {
   const now = Date.now();
+  if (view.id) renderDetail();
   const mon = $('monitors'), bottom = $('bottom');
   mon.replaceChildren(); bottom.replaceChildren();
 
   const mStale = isStale(state.monitors), cStale = isStale(state.checks), vStale = isStale(state.versions);
-  if (state.monitors.data) state.monitors.data.forEach((m) => mon.append(monitorTile(m, mStale)));
+  if (state.monitors.data) state.monitors.data.forEach((m) => mon.append(clickable(monitorTile(m, mStale), 'uptime:' + m.name, m.name)));
   if (!state.monitors.data || (state.monitors.error && mStale)) {
     mon.append(messageTile('Uptime', 'UptimeRobot', state.monitors.error || 'loading…', state.monitors.error ? 'warn' : ''));
   }
-  if (state.checks.data) state.checks.data.forEach((c) => bottom.append(checkTile(c, cStale)));
+  if (state.checks.data) state.checks.data.forEach((c) => bottom.append(clickable(checkTile(c, cStale), 'job:' + c.name, c.name)));
   if (!state.checks.data || (state.checks.error && cStale)) {
     bottom.append(messageTile('Background jobs', 'Healthchecks.io', state.checks.error || 'loading…', state.checks.error ? 'warn' : ''));
   }
-  bottom.append(versionsTile(state.versions.data, state.versions.data ? null : state.versions.error, vStale && !!state.versions.data));
+  $('strip').replaceChildren(versionsTile(state.versions.data, state.versions.data ? null : state.versions.error, vStale && !!state.versions.data));
 
   for (const row of [mon, bottom]) {
     row.style.setProperty('--cols', Math.max(4, row.children.length));
@@ -458,7 +903,8 @@ function tick() {
     const h = d.getHours(), from = +m[1], to = +m[2];
     document.body.classList.toggle('dim', from > to ? (h >= from || h < to) : (h >= from && h < to));
   }
-  render();
+  if (view.id && Date.now() - lastInput > DETAIL_IDLE_MS) closeDetail();
+  else render();
 }
 
 // A static picture lit for months leaves a mark: move everything a few pixels every 5 minutes.
@@ -498,16 +944,38 @@ $('awake').addEventListener('click', async () => {
     document.documentElement.requestFullscreen().catch(() => {});
   }
 });
-// A double tap anywhere toggles full screen.
-document.addEventListener('dblclick', () => {
+// A double tap anywhere toggles full screen. Not on a tile or the detail screen: there the first
+// tap already opened something.
+document.addEventListener('dblclick', (e) => {
+  if (view.id || (e.target.closest && e.target.closest('[data-show]'))) return;
   if (document.fullscreenElement) document.exitFullscreen();
   else if (document.documentElement.requestFullscreen) document.documentElement.requestFullscreen().catch(() => {});
 });
+
+// ── Detail navigation ──────────────────────────────────────────────────────
+
+for (const type of ['pointerdown', 'keydown', 'wheel']) {
+  document.addEventListener(type, () => { lastInput = Date.now(); }, { passive: true });
+}
+for (const row of [$('monitors'), $('bottom')]) {
+  row.addEventListener('click', (e) => {
+    const tile = e.target.closest('[data-show]');
+    if (tile) { lastInput = Date.now(); openDetail(tile.dataset.show); }
+  });
+  row.addEventListener('keydown', (e) => {
+    const tile = e.target.closest('[data-show]');
+    if (tile && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); openDetail(tile.dataset.show); }
+  });
+}
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && view.id) closeDetail(); });
+// The back button of the tablet, or Back on the screen, walks the history.
+window.addEventListener('popstate', applyRoute);
 
 // ── Start ──────────────────────────────────────────────────────────────────
 
 function start() {
   $('setup').classList.remove('show');
+  applyRoute();
   refresh();
   setInterval(refresh, cfg.every * 1000);
   setInterval(tick, 5000);
